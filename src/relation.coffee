@@ -2,6 +2,8 @@ Spine   = @Spine or require('spine')
 isArray = Spine.isArray
 require = @require or ((value) -> eval(value))
 
+# ### Collection
+# modelの集合を操作するためのクラス
 class Collection extends Spine.Module
   constructor: (options = {}) ->
     for key, value of options
@@ -56,6 +58,7 @@ class Collection extends Spine.Module
   associated: (record) ->
     record[@fkey] is @record.id
 
+# ### Instance
 class Instance extends Spine.Module
   constructor: (options = {}) ->
     for key, value of options
@@ -69,7 +72,7 @@ class Instance extends Spine.Module
       value = new @model(value)
     value.save() if value.isNew()
     @record[@fkey] = value and value.id
-
+# ### Singleton
 class Singleton extends Spine.Module
   constructor: (options = {}) ->
     for key, value of options
