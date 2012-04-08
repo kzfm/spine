@@ -11,13 +11,13 @@ Ajax =
   requests: []
 
   disable: (callback) ->
-    if @enabled    
+    if @enabled
       @enabled = false
       do callback
       @enabled = true
     else
       do callback
-    
+
   requestNext: ->
     next = @requests.shift()
     if next
@@ -27,32 +27,33 @@ Ajax =
 
   request: (callback) ->
     (do callback).complete(=> do @requestNext)
-      
+
+  # pending属性で切り替える
   queue: (callback) ->
     return unless @enabled
     if @pending
       @requests.push(callback)
     else
       @pending = true
-      @request(callback)    
+      @request(callback)
     callback
-    
+# ### Base
 class Base
   defaults:
     contentType: 'application/json'
     dataType: 'json'
     processData: false
     headers: {'X-Requested-With': 'XMLHttpRequest'}
-  
+
   ajax: (params, defaults) ->
     $.ajax($.extend({}, @defaults, defaults, params))
-    
+
   queue: (callback) ->
     Ajax.queue(callback)
-
+# ### Collection
 class Collection extends Base
-  constructor: (@model) -> 
-    
+  constructor: (@model) ->
+
   find: (id, params) ->
     record = new @model(id: id)
     @ajax(
@@ -61,7 +62,7 @@ class Collection extends Base
       url:  Ajax.getURL(record)
     ).success(@recordsResponse)
      .error(@errorResponse)
-    
+
   all: (params) ->
     @ajax(
       params,
@@ -69,7 +70,7 @@ class Collection extends Base
       url:  Ajax.getURL(@model)
     ).success(@recordsResponse)
      .error(@errorResponse)
-    
+
   fetch: (params = {}, options = {}) ->
     if id = params.id
       delete params.id
@@ -79,18 +80,19 @@ class Collection extends Base
       @all(params).success (records) =>
         @model.refresh(records, options)
 
-  # Private
-
+  # ### Private
+  # トリガー発生させる
   recordsResponse: (data, status, xhr) =>
     @model.trigger('ajaxSuccess', null, status, xhr)
 
   errorResponse: (xhr, statusText, error) =>
     @model.trigger('ajaxError', null, xhr, statusText, error)
 
+# ### Singleton
 class Singleton extends Base
   constructor: (@record) ->
     @model = @record.constructor
-  
+
   reload: (params, options) ->
     @queue =>
       @ajax(
@@ -99,7 +101,7 @@ class Singleton extends Base
         url:  Ajax.getURL(@record)
       ).success(@recordResponse(options))
        .error(@errorResponse(options))
-  
+
   create: (params, options) ->
     @queue =>
       @ajax(
@@ -119,7 +121,7 @@ class Singleton extends Base
         url:  Ajax.getURL(@record)
       ).success(@recordResponse(options))
        .error(@errorResponse(options))
-  
+
   destroy: (params, options) ->
     @queue =>
       @ajax(
@@ -137,7 +139,7 @@ class Singleton extends Base
         data = false
       else
         data = @model.fromJSON(data)
-    
+
       Ajax.disable =>
         if data
           # ID change, need to do some shifting
@@ -146,16 +148,16 @@ class Singleton extends Base
 
           # Update with latest data
           @record.updateAttributes(data.attributes())
-        
+
       @record.trigger('ajaxSuccess', data, status, xhr)
       options.success?.apply(@record)
-      
+
   errorResponse: (options = {}) =>
     (xhr, statusText, error) =>
       @record.trigger('ajaxError', xhr, statusText, error)
       options.error?.apply(@record)
 
-# Ajax endpoint
+# ## Ajax endpoint
 Model.host = ''
 
 Include =
@@ -167,20 +169,20 @@ Include =
     url += encodeURIComponent(@id)
     args.unshift(url)
     args.join('/')
-    
-Extend = 
+
+Extend =
   ajax: -> new Collection(this)
 
   url: (args...) ->
     args.unshift(@className.toLowerCase() + 's')
     args.unshift(Model.host)
     args.join('/')
-      
+
 Model.Ajax =
   extended: ->
     @fetch @ajaxFetch
     @change @ajaxChange
-    
+
     @extend Extend
     @include Include
 
@@ -188,16 +190,16 @@ Model.Ajax =
 
   ajaxFetch: ->
     @ajax().fetch(arguments...)
-    
+
   ajaxChange: (record, type, options = {}) ->
     return if options.ajax is false
     record.ajax()[type](options.ajax, options)
-    
-Model.Ajax.Methods = 
+
+Model.Ajax.Methods =
   extended: ->
     @extend Extend
     @include Include
-    
+
 # Globals
 Ajax.defaults   = Base::defaults
 Spine.Ajax      = Ajax
