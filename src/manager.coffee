@@ -1,11 +1,13 @@
 Spine ?= require('spine')
 $      = Spine.$
 
+# controllerをまとめて面倒見る
 class Spine.Manager extends Spine.Module
   @include Spine.Events
 
   constructor: ->
     @controllers = []
+    # changeイベントを監視
     @bind 'change', @change
     @add(arguments...)
 
@@ -23,8 +25,7 @@ class Spine.Manager extends Spine.Module
   deactivate: ->
     @trigger('change', false, arguments...)
 
-  # Private
-
+  # ### Private
   change: (current, args...) ->
     for cont in @controllers
       if cont is current
